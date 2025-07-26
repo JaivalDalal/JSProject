@@ -1,0 +1,72 @@
+<!-- 
+    PROJECT TITLE : PURBLE PLACE - A MEMORY GAME
+    NAME          : JAIVAL N. DALAL
+    ENROLLMENT NO : 23002170120006
+    SUBJECT       : FULL STACK DEVELOPMENT - I
+    DATE          : APRIL 1st, 2024
+ -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Purble Pairs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles/index.css">
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="home-screen">
+        </div>
+        <div class="home-contents">
+            <img src="Images/logo.png" class="logo-img">
+            <div class="eyes">
+                <div class="eye1">
+                    <div class="pupil"></div>
+                </div>
+                <div class="eye2">
+                    <div class="pupil"></div>
+                </div>
+            </div>
+            <div class="btn-container"><button class="play-btn">play</button><i class="fa-solid fa-play"></i></div>
+
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('mousemove', animate);
+        window.addEventListener("resize", changeDims)
+        let winWidth = window.innerWidth;
+        let winHeight = window.innerHeight;
+        let x = 100;
+        let y = 100;
+        let pupils = document.getElementsByClassName("pupil");
+        let pupilX = Math.round((230 - x) / 2);
+        let pupilY = Math.round((200 - y) / 2);
+
+        function animate(e) {
+            let mouseX = Math.floor((e.pageX / winWidth) * x) + pupilX;
+            pupils[0].style.left = mouseX + "px";
+            pupils[1].style.left = mouseX + "px";
+            let mouseY = Math.floor((e.pageY / winHeight) * y) + pupilY;
+            pupils[0].style.top = mouseY + "px";
+            pupils[1].style.top = mouseY + "px";
+        }
+
+        function changeDims() {
+            winWidth = window.innerWidth;
+            winHeight = window.innerHeight;
+        }
+
+        // Start game
+        document.querySelector('.play-btn').addEventListener("click", start);
+        function start() {
+            window.open("play.html", "_self");
+        }
+    </script>
+</body>
+
+</html>

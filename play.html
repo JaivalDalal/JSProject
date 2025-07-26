@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purble Pairs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles/play.css">
+</head>
+
+<body>
+    <div class="menu-box">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+    <div class="home-alert">
+        <div class="msg-container">
+            <h2 class="header">Confirm Exit</h2>
+            <div class="star-points">
+                <div class="game-msg">Do you really want to exit?</div>
+            </div>
+            <div class="footer">
+                <button class="home-btn" onclick="goHome()">Yes</button>
+                <button class="replay-btn" onclick="dismiss()">No</button>
+            </div>
+        </div>
+    </div>
+    <div class="sidebar">
+        <div class="score-board">
+            Score: <span class="score">0 <span class="score-counter"></span> </span><br>
+            Tries:<span class="tries">0<span class="flip-counter">+1</span></span></div>
+        <div class="timer"><span class="fill"></span></div>
+        <div class="hint-box">
+            <div class="hint" title="Get a hint">
+            </div>
+            <div class="hint" title="Get a hint">
+            </div>
+            <div class="hint" title="Get a hint">
+            </div>
+        </div>
+    </div>
+
+    <div class="game-board">
+    </div>
+
+    <div class="difficulty-chooser">
+        <div class="level" id="l1">
+            <h2>easy</h2>
+            <div class="description">6x6 field, no timer, no negative points</div>
+        </div>
+        <div class="level" id="l2">
+            <h2>medium</h2>
+            <div class="description">6x6 field, 60 sec timer, negative points</div>
+        </div>
+        <div class="level" id="l3">
+            <h2>hard</h2>
+            <div class="description">8x8 field, 150 sec timer, negative points, 2 rounds</div>
+        </div>
+    </div>
+
+    <div class="game-over-dialog">
+        <div class="msg-container">
+            <h2 class="header"></h2>
+            <div class="star-points">
+                <div class="game-msg">jhgk</div>
+                <!-- <div class="star-container"></div> -->
+                <div class="score-display">Score: 90 Trials: 30</div>
+            </div>
+            <div class="footer">
+                <button class="home-btn"><i class="fa-solid fa-house-chimney"></i>home</button>
+                <button class="replay-btn"><i class="fa-solid fa-rotate-right"></i>New Game</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script>
+    //Game Specific Variables
+    let gameMode = 0;       // Difficulty level {easy|medium|hard}
+    let matrixSize = 0;     // Size of gameboard
+    let clicked = false;
+    let active = null;
+    let imgs = [];
+    let cardsArr = [];
+    let score = document.querySelector('.score');
+    let trials = document.querySelector('.tries');
+    let inr = 10;
+    let dcr = 0;
+    let counter = 1;
+    const trialCounter = document.querySelector('.flip-counter');
+    const scoreCounter = document.querySelector('.score-counter');
+    let round2 = false;
+
+    // loading audio files
+    const matchSound = new Audio("audio/MatchSound.mp3");
+    const mismatchSound = new Audio("audio/MismatchSound.mp3");
+    const revealSound = new Audio("audio/TapSound.mp3");
+
+    // Set game mode
+    function startGame() {
+        document.querySelector('.game-over-dialog').style.display = "none";
+        let mode = sessionStorage.getItem("mode");
+        if (mode == null) {
+            document.querySelector('.difficulty-chooser').style.display = "flex";
+            let choosers = document.querySelectorAll('.difficulty-chooser > .level');
+            for (let i = 0; i < choosers.length; i++) {
+                choosers[i].addEventListener("click", setGameMode);
+            }
+        }
+        else {
+            gameMode = parseInt(mode);
+            matrixSize = (gameMode == 1 || gameMode == 2) ? 6 : 8;
+            setUp();
+        }
+    }
+
+    // Choosing the difficulty level
+    function setGameMode() {
+        if (this.getAttribute("id") == "l1") {
+            gameMode = 1;
+        }
+        else if (this.getAttribute("id") == "l2") {
+            gameMode = 2;
+        }
+        else {
+            gameMode = 3;
+            round2 = true;
+        }
+        sessionStorage.setItem("mode", gameMode);
+        matrixSize = (gameMode == 1 || gameMode == 2) ? 6 : 8;
+        document.querySelector('.difficulty-chooser').style.display = "none";
+        setUp();
+    }
+
+    // set the game board according to the game mode
+    function setUp() {
+        let board = document.querySelector('.game-board');
+        board.style.gridTemplateColumns = "repeat(" + matrixSize + ",1fr)";
+        board.style.gridTemplateRows = "repeat(" + matrixSize + ",1fr)";
+
+        if (gameMode == 1) {
+            document.querySelector('.sidebar > .timer').style.display = "none";
+
+            let hint = document.querySelectorAll('.hint-box > .hint');
+            for (let i = 0; i < hint.length; i++) {
+                hint[i].innerHTML = "<img src='Images/bulb.jpg' class='hint-img'>";
+                hint[i].firstChild.addEventListener("click", showHint);
+            }
+            dcr = 0;
+        }
+        else {
+            dcr = 5;
+            if (gameMode == 2) {
+                document.querySelector('.sidebar > .timer > .fill').style.animation = "fill 150s 1000ms linear 1 forwards";
+
+                let hint = document.querySelectorAll('.hint-box > .hint');
+                hint[0].innerHTML = "<img src='Images/bulb.jpg' class='hint-img'>";
+                hint[0].firstChild.addEventListener("click", showHint);
+                for (let i = 1; i < hint.length; i++) {
+                    hint[i].setAttribute("title", "");
+                    hint[i].style.cursor = "auto";
+                    hint[i].style.border = "none";
+                }
+
+                setTimeout(() => {
+                    gameOver("Alas!", "You ran out of time!!");
+                }, 150000);
+            }
+            else {
+                document.querySelector('.sidebar > .timer > .fill').style.animation = "fill 300s 1000ms linear 1 forwards";
+                setTimeout(() => {
+                    gameOver("Alas!", "You ran out of time!!");
+                }, 300000);
+            }
+        }
+
+        let home = document.querySelector('.menu-box');
+
+        home.addEventListener('click', function () {
+            document.querySelector('.home-alert').style.display = "block";
+        });
+
+        for (let i = 1; i <= (matrixSize * matrixSize); i++) {
+            board.innerHTML += "<div class='cards' id='card" + i + "'><div class='card'><div class='front-face'></div><div class='back-face'></div></div></div>";
+            cardsArr.push(i);
+        }
+
+        // Making Cards Clickable        
+        let cards = document.querySelectorAll('.cards');
+        for (let i = 0; i < cards.length; i++) {
+            cards[i].addEventListener('click', flipCard);
+            // Setting font size
+            cards[i].style.fontSize = Math.floor(cards[i].offsetHeight / 1.5) + "px";
+            // Making fonts responsive
+            window.addEventListener("resize", function () {
+                cards[i].style.fontSize = Math.floor(cards[i].offsetHeight / 1.5) + "px";
+            });
+        }
+
+
+        // Setting cards' front face image
+        let cardFace = document.querySelectorAll('.front-face');
+        let rnd = Math.floor((Math.random() * 8) + 1);
+
+        for (let i = 0; i < cardFace.length; i++) {
+            let img = document.createElement('img');
+            img.setAttribute('src', 'images/coverimg/' + rnd + '.jpg');
+            cardFace[i].appendChild(img);
+        }
+
+        //Setting cards' backface images
+        for (let i = 12; i < 65; i++) {
+            imgs.push("&#1285" + i + ';');
+        }
+
+        let emojis = imgs.length;
+
+        for (let i = 1; i <= 22; i++) {
+            imgs.push("images/" + i + ".jpg");
+        }
+
+        for (let i = 0; i < Math.floor((matrixSize * matrixSize) / 2); i++) {
+            let rnd = Math.floor(Math.random() * imgs.length);
+            let inner = "";
+            if (rnd < emojis) {
+                inner = imgs[rnd];
+                emojis--;
+            }
+            else {
+                inner = "<img src='" + imgs[rnd] + "'/>";
+            }
+            for (let j = 1; j <= 2; j++) {
+                let r = Math.floor(Math.random() * cardsArr.length);
+                document.querySelector("#card" + (cardsArr[r]) + "> .card > .back-face").innerHTML = inner;
+                cardsArr.splice(r, 1);
+            }
+            imgs.splice(rnd, 1);
+        }
+    }
+
+    function flipCard() {
+        this.classList.toggle('flippable');
+        revealSound.play();
+        if (clicked && this != active) {
+            setTimeout(() => {
+                play(active, this);
+                trials.innerHTML = parseInt(trials.innerHTML) + 1;
+                trialCounter.style.animation = "countAnimation 1s linear 1";
+                clicked = false;
+            }, 500);
+        }
+        else if (this == active) {
+            clicked = false;
+        }
+        else {
+            clicked = true;
+            active = this;
+        }
+    }
+
+    function showHint() {
+        let cards = document.querySelectorAll('.cards');
+        document.querySelector('.hint-box').style.pointerEvents = "none";
+        for (let i = 0; i < cards.length; i++) {
+            cards[i].classList.add('flippable');
+        }
+        setTimeout(() => {
+            document.querySelector('.hint-box').style.pointerEvents = "auto";
+            for (let i = 0; i < cards.length; i++) {
+                cards[i].classList.remove('flippable');
+            }
+        }, 6000);
+
+        this.parentElement.style.border = "none";
+        this.parentElement.style.cursor = "auto";
+        this.parentElement.setAttribute("title", "");
+        this.parentElement.innerHTML = "";
+    }
+
+    function play(ele1, ele2) {
+        if (ele1.innerHTML == ele2.innerHTML) {
+            ele1.style.visibility = "hidden";
+            ele2.style.visibility = "hidden";
+            score.innerHTML = parseInt(score.innerHTML) + inr;
+            scoreCounter.style.animation = "countAnimation 1s linearq 1";
+            matchSound.play();
+
+            if (counter == Math.floor((matrixSize * matrixSize) / 2)) {
+                if (round2) {
+                    setUp();
+                }
+                else {
+                    gameOver("Hurray!!", "You matched all the pairs!");
+                }
+            }
+            counter++;
+        }
+        else {
+            ele1.classList.remove('flippable');
+            ele2.classList.remove('flippable');
+            score.innerHTML = parseInt(score.innerHTML) - dcr;
+            mismatchSound.play();
+        }
+    }
+
+    function gameOver(title, msg) {
+        document.querySelector('.game-over-dialog').style.display = "block";
+        document.querySelector('.game-over-dialog>.msg-container>.header').innerHTML = title;
+        document.querySelector('.game-over-dialog>.msg-container .game-msg').innerHTML = msg;
+        document.querySelector('.game-over-dialog>.msg-container .score-display').innerHTML = "Score: " + score.innerHTML + "Trials: " + trials.innerHTML;
+        let home = document.querySelector('.game-over-dialog>.msg-container .footer .home-btn');
+        let res = document.querySelector('.game-over-dialog>.msg-container .footer .replay-btn');
+        home.addEventListener("click", goHome);
+        res.addEventListener("click", Restart);
+    }
+
+    function goHome() {
+        sessionStorage.removeItem("mode");
+        history.back();
+    }
+
+    function dismiss() {
+        document.querySelector('.home-alert').style.display = "none";
+    }
+
+    function Restart() {
+        location.reload();
+    }
+
+    startGame();
+
+</script>
+
+</html>
